@@ -1,0 +1,1 @@
+GameNet Firewall is a Windows 11 desktop utility in development that discovers installed Steam games and aims to restrict inbound and outbound network traffic to Steam, a selected game, and an optional VPN such as Mudfish. Includes a planned reversible Windows Firewall workflow and self-contained EXE builds. Firewall enforcement is not implemented yet.
