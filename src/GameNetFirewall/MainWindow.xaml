@@ -68,6 +68,12 @@
                                  Text="Not scanned yet."/>
                         <TextBlock Text="This is discovery only; found paths are not automatically allowed." Foreground="#AAB4C5"
                                    FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                        <Button Content="Add Discovered Steam / VPN Outbound Rules" Padding="12,8" Margin="0,7,0,0"
+                                Click="AddDependencyRules_Click"/>
+                        <Button Content="Remove Discovered Dependency Rules" Padding="12,8" Margin="0,7,0,0"
+                                Click="RemoveDependencyRules_Click"/>
+                        <TextBlock Text="These prepare app-specific rules for a future allowlist. They do not block other programs or guarantee VPN tunnel traffic is covered."
+                                   Foreground="#AAB4C5" FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0"/>
                         <TextBlock Text="NETWORK OPTIONS" FontWeight="Bold" FontSize="13" Margin="0,14,0,0"/>
                         <CheckBox x:Name="MudfishCheckBox" Content="I use Mudfish / another VPN"
                                   Margin="0,10,0,0" Foreground="#F3F5F8"/>
