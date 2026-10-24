@@ -59,7 +59,16 @@
                         <Button Content="Scan Game Folder" Padding="12,8" Margin="0,7,0,0"
                                 HorizontalAlignment="Left" Click="ScanExecutables_Click"/>
                         <Separator Margin="0,14,0,14" Background="#344055"/>
-                        <TextBlock Text="NETWORK OPTIONS" FontWeight="Bold" FontSize="13"/>
+                        <TextBlock Text="NETWORK DEPENDENCIES" FontWeight="Bold" FontSize="13" Margin="0,14,0,0"/>
+                        <Button Content="Scan Steam / Mudfish Processes" Padding="12,8" Margin="0,7,0,0"
+                                Click="ScanDependencies_Click"/>
+                        <TextBox x:Name="DependenciesText" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True"
+                                 VerticalScrollBarVisibility="Auto" Height="95" Margin="0,7,0,0"
+                                 Background="#111824" Foreground="#C2CAD7" BorderThickness="0"
+                                 Text="Not scanned yet."/>
+                        <TextBlock Text="This is discovery only; found paths are not automatically allowed." Foreground="#AAB4C5"
+                                   FontSize="12" TextWrapping="Wrap" Margin="0,5,0,0"/>
+                        <TextBlock Text="NETWORK OPTIONS" FontWeight="Bold" FontSize="13" Margin="0,14,0,0"/>
                         <CheckBox x:Name="MudfishCheckBox" Content="I use Mudfish / another VPN"
                                   Margin="0,10,0,0" Foreground="#F3F5F8"/>
                         <TextBlock Text="VPN processes and tunnel requirements are not automatically allowlisted yet."
@@ -74,6 +83,8 @@
                                 Click="RemoveRules_Click"/>
                         <Button Content="View Current Firewall Profiles" Padding="12,9" Margin="0,7,0,0"
                                 Click="ShowProfiles_Click"/>
+                        <Button Content="Restore Full Firewall Backup…" Padding="12,9" Margin="0,7,0,0"
+                                Click="RestoreBackup_Click"/>
                         <TextBlock x:Name="StatusText" Text="No firewall changes made." Foreground="#AAB4C5"
                                    TextWrapping="Wrap" Margin="0,12,0,0" FontSize="12"/>
                     </StackPanel>
