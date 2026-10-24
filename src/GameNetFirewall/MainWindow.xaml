@@ -1,0 +1,79 @@
+<Window x:Class="GameNetFirewall.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="GameNet Firewall" Height="650" Width="960" MinHeight="540" MinWidth="780"
+        Background="#10141D" Foreground="#F3F5F8" WindowStartupLocation="CenterScreen">
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <DockPanel Grid.Row="0" Margin="0,0,0,20">
+            <StackPanel>
+                <TextBlock Text="GAMENET FIREWALL" FontSize="24" FontWeight="Bold"/>
+                <TextBlock Text="A focused network profile for Steam and your selected game"
+                           Foreground="#AAB4C5" Margin="0,5,0,0"/>
+            </StackPanel>
+            <Border DockPanel.Dock="Right" Background="#263246" CornerRadius="12" Padding="12,7"
+                    VerticalAlignment="Center">
+                <TextBlock Text="DEVELOPMENT BUILD" FontSize="11" FontWeight="SemiBold"/>
+            </Border>
+        </DockPanel>
+        <Border Grid.Row="1" Background="#1A2230" CornerRadius="10" Padding="16" Margin="0,0,0,16">
+            <StackPanel>
+                <TextBlock Text="STEAM LIBRARY" FontSize="13" FontWeight="Bold" Foreground="#91B6FF"/>
+                <DockPanel Margin="0,10,0,0">
+                    <TextBlock x:Name="GameCountText" Text="Scanning for installed games…" VerticalAlignment="Center"
+                               Foreground="#C2CAD7"/>
+                    <Button DockPanel.Dock="Right" Content="Rescan" Padding="18,8" Click="Rescan_Click"/>
+                </DockPanel>
+            </StackPanel>
+        </Border>
+        <Grid Grid.Row="2">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="16"/>
+                <ColumnDefinition Width="0.8*"/>
+            </Grid.ColumnDefinitions>
+            <Border Grid.Column="0" Background="#1A2230" CornerRadius="10" Padding="12">
+                <DockPanel>
+                    <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Margin="0,0,0,10"
+                             Padding="10" FontSize="14" ToolTip="Search installed Steam games"
+                             TextChanged="SearchBox_TextChanged"/>
+                    <ListBox x:Name="GamesList" Background="#111824" Foreground="#F3F5F8"
+                             BorderThickness="0" SelectionChanged="GamesList_SelectionChanged"
+                             DisplayMemberPath="Name"/>
+                </DockPanel>
+            </Border>
+            <Border Grid.Column="2" Background="#1A2230" CornerRadius="10" Padding="18">
+                <StackPanel>
+                    <TextBlock Text="SELECTED GAME" Foreground="#91B6FF" FontWeight="Bold" FontSize="13"/>
+                    <TextBlock x:Name="SelectedGameName" Text="Choose a game" FontSize="21"
+                               FontWeight="SemiBold" TextWrapping="Wrap" Margin="0,14,0,8"/>
+                    <TextBlock x:Name="SelectedGamePath" Text="The install path will appear here."
+                               Foreground="#AAB4C5" TextWrapping="Wrap" FontSize="12"/>
+                    <Separator Margin="0,18,0,18" Background="#344055"/>
+                    <TextBlock Text="NETWORK PROFILE" FontWeight="Bold" FontSize="13"/>
+                    <CheckBox x:Name="MudfishCheckBox" Content="I use Mudfish / another VPN"
+                              Margin="0,12,0,0" Foreground="#F3F5F8"/>
+                    <TextBlock Text="VPN support will inspect tunnel and service requirements before rules are applied."
+                               Foreground="#AAB4C5" FontSize="12" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                    <TextBlock Text="Inbound and outbound enforcement is not active in this development build."
+                               Foreground="#FFC978" FontSize="12" TextWrapping="Wrap" Margin="0,18,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Border Grid.Row="3" Background="#2B241A" CornerRadius="8" Padding="12" Margin="0,16,0,0">
+            <TextBlock Text="SAFE PREVIEW ONLY — This build scans Steam metadata. It does not change firewall rules or block traffic."
+                       Foreground="#FFD79A" TextWrapping="Wrap"/>
+        </Border>
+        <DockPanel Grid.Row="4" Margin="0,16,0,0">
+            <TextBlock Text="Next: executable detection, policy preview, backup and reversible firewall rules."
+                       Foreground="#AAB4C5" VerticalAlignment="Center"/>
+            <Button DockPanel.Dock="Right" Content="Refresh Steam List" Padding="18,10" Click="Rescan_Click"/>
+        </DockPanel>
+    </Grid>
+</Window>
