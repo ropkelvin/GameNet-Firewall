@@ -216,6 +216,83 @@ public partial class MainWindow : Window
         }
     }
 
+    private void AddDependencyRules_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministrator())
+            return;
+
+        if (_dependencies.Count == 0)
+        {
+            MessageBox.Show(this, "Scan Steam / Mudfish Processes first. No discovered dependency paths are available.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var existing = _dependencies.Where(item => File.Exists(item.Path)).ToArray();
+        if (existing.Length == 0)
+        {
+            MessageBox.Show(this, "No valid executable paths were found. Scan again while Steam or Mudfish is installed/running.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var preview = string.Join(Environment.NewLine, existing.Select(item => $"{item.Kind}: {item.Path}"));
+        if (MessageBox.Show(this,
+            "This will back up the current firewall policy and add OUTBOUND ALLOW rules for these discovered executables:\n\n"
+            + preview + "\n\nThis does not enable strict mode or block other apps. Continue?",
+            "Confirm dependency rules", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            _lastBackupPath = _firewall.CreateBackup();
+            var added = new List<string>();
+            foreach (var dependency in existing)
+            {
+                var name = $"{FirewallService.RulePrefix}Dependency - {Sanitize(Path.GetFileNameWithoutExtension(dependency.Path))} - Outbound";
+                _firewall.AddProgramAllowRule(name, dependency.Path, "out");
+                added.Add(name);
+            }
+
+            StatusText.Text = $"Added {added.Count} dependency outbound rule(s). Backup: {_lastBackupPath}";
+            MessageBox.Show(this,
+                $"Added outbound allow rules for {added.Count} discovered executable(s).\n\nBackup:\n{_lastBackupPath}\n\nImportant: this does not block other applications. If multiple paths share the same executable name, Windows Firewall may show rules with duplicate names.",
+                "Dependency rules added", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Could not add dependency rules", ex);
+        }
+    }
+
+    private void RemoveDependencyRules_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministrator())
+            return;
+
+        if (_dependencies.Count == 0)
+        {
+            MessageBox.Show(this, "Scan Steam / Mudfish Processes first so the app knows which dependency rules to remove.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (MessageBox.Show(this, "Remove GameNet Firewall outbound dependency rules matching the currently discovered executable names? Other rules will not be touched.",
+            "Confirm dependency rule removal", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        var errors = new List<string>();
+        foreach (var dependency in _dependencies)
+        {
+            var name = $"{FirewallService.RulePrefix}Dependency - {Sanitize(Path.GetFileNameWithoutExtension(dependency.Path))} - Outbound";
+            try { _firewall.RemoveRule(name); }
+            catch (Exception ex) { errors.Add($"{name}: {ex.Message}"); }
+        }
+
+        StatusText.Text = errors.Count == 0
+            ? "Removal requested for dependency rules matching the last scan."
+            : $"Some dependency rules could not be removed: {string.Join(" | ", errors)}";
+        if (errors.Count > 0)
+            MessageBox.Show(this, StatusText.Text, "Dependency rule removal", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
     private void RestoreBackup_Click(object sender, RoutedEventArgs e)
     {
         if (!RequireAdministrator())
