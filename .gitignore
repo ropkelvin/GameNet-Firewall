@@ -1,0 +1,12 @@
+**/bin/
+**/obj/
+artifacts/
+publish/
+.vs/
+*.user
+*.suo
+*.userosscache
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
