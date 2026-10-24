@@ -2,14 +2,14 @@
 
 A Windows 11 desktop utility for inspecting Steam games and preparing named Windows Defender Firewall rules.
 
-> **Development status:** This app scans Steam libraries, finds game executable candidates, discovers likely Steam/Mudfish executable paths, backs up the Windows Firewall policy, inspects profiles, and can create/remove app-specific allow rules. **It does not yet enforce a strict allowlist or block all other applications.**
+> **Development status:** This app scans Steam libraries, finds game executable candidates, discovers likely Steam/VPN/network-tool executable paths, backs up the Windows Firewall policy, inspects profiles, and can create/remove app-specific allow rules. **It does not yet enforce a strict allowlist or block all other applications.**
 
 ## Current features
 
 - Discover Steam installations, library folders and installed games.
 - Search games and view their install paths.
 - Scan a selected game folder for executable candidates (up to four directory levels).
-- Discover Steam client paths and likely running/installed Mudfish executable paths.
+- Discover Steam client paths and likely running/installed VPN/network-tool executable paths.
 - Add/remove outbound allow rules for discovered Steam/VPN executables as preparation for a future allowlist.
 - Preview the selected game's proposed rules.
 - Export a .wfw backup of the current Windows Firewall policy.
@@ -22,8 +22,8 @@ A Windows 11 desktop utility for inspecting Steam games and preparing named Wind
 ## Important limitations
 
 - **Allow rules are not an allowlist.** On a typical Windows configuration, adding an allow rule for one game does not block other programs.
-- This build intentionally does not change the global outbound default policy. Strict outbound blocking can disrupt DNS, DHCP, Steam authentication/updates, Mudfish/VPN tunnels, voice chat, anti-cheat, Windows services, remote access and unrelated apps.
-- Steam/Mudfish discovery is heuristic. It does not guarantee detection of every service, helper, tunnel driver, or launcher. Found paths are shown for inspection only and are not automatically allowed.
+- This build intentionally does not change the global outbound default policy. Strict outbound blocking can disrupt DNS, DHCP, Steam authentication/updates, VPN/network tools tunnels, voice chat, anti-cheat, Windows services, remote access and unrelated apps.
+- Steam/network-tool discovery is heuristic. It does not guarantee detection of every service, helper, tunnel driver, or launcher. Found paths are shown for inspection only and are not automatically allowed.
 - Game executable scanning is heuristic. Confirm the selected path is the actual game executable.
 - Rule removal scans the game's current folder for executable candidates. If a game executable was moved or deleted, remove its old rule manually in Windows Defender Firewall with Advanced Security.
 - The app does not elevate itself. Close it and choose **Run as administrator** when a firewall action requires elevation.
@@ -36,7 +36,7 @@ A Windows 11 desktop utility for inspecting Steam games and preparing named Wind
 2. Confirm the actual game executable.
 3. Click **Preview Actions** before making changes.
 4. Run as administrator and back up the current firewall policy.
-5. Use **Scan Steam / Mudfish Processes** to inspect detected dependency paths.
+5. Use **Scan Steam / VPN software Processes** to inspect detected dependency paths.
 6. If useful, add outbound rules for discovered Steam/VPN executables. These rules do not block other apps and may not cover VPN tunnel drivers or services.
 7. Keep a separate recovery path available before changing Windows networking settings.
 
@@ -57,12 +57,12 @@ The GitHub Actions workflow uploads the self-contained Windows x64 artifact name
 - [x] Steam installation/library discovery
 - [x] Installed-game list and search
 - [x] Candidate game executable scanner
-- [x] Steam/Mudfish executable discovery (best-effort)
+- [x] Steam/VPN/network-tool executable discovery (best-effort)
 - [x] Firewall policy backup and profile inspection
 - [x] Preview and named app-specific allow rules
 - [x] Add/remove outbound rules for discovered Steam/VPN executables
 - [x] Remove app-owned rules and guarded full-policy restore
-- [ ] Identify Steam services, launchers, anti-cheat and Mudfish tunnel dependencies comprehensively
+- [ ] Identify Steam services, launchers, anti-cheat and VPN software tunnel dependencies comprehensively
 - [ ] Strict outbound allowlisting with explicit safeguards, tested recovery mode and clear dependency handling
 - [ ] Automated tests, VM testing and signed release packaging
 
@@ -72,4 +72,4 @@ The GitHub Actions workflow uploads the self-contained Windows x64 artifact name
 - Windows netsh advfirewall interface
 - GitHub Actions
 
-Not affiliated with Valve, Microsoft, Mudfish, or any game publisher.
+Not affiliated with Valve, Microsoft, VPN software, or any game publisher.
