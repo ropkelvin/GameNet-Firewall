@@ -1,6 +1,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using Microsoft.Win32;
 using GameNetFirewall.Models;
 using GameNetFirewall.Services;
 
@@ -11,6 +12,8 @@ public partial class MainWindow : Window
     private readonly SteamLibraryScanner _scanner = new();
     private readonly ExecutableScanner _executableScanner = new();
     private readonly FirewallService _firewall = new();
+    private readonly NetworkDependencyScanner _dependencyScanner = new();
+    private IReadOnlyList<NetworkDependency> _dependencies = Array.Empty<NetworkDependency>();
     private IReadOnlyList<SteamGame> _allGames = Array.Empty<SteamGame>();
     private IReadOnlyList<GameExecutable> _executables = Array.Empty<GameExecutable>();
     private string? _lastBackupPath;
@@ -194,6 +197,58 @@ public partial class MainWindow : Window
             : $"Some rules could not be removed: {string.Join(" | ", errors)}";
         if (errors.Count > 0)
             MessageBox.Show(this, StatusText.Text, "Rule removal", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
+    private void ScanDependencies_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            _dependencies = _dependencyScanner.Scan();
+            DependenciesText.Text = _dependencies.Count == 0
+                ? "No Steam or Mudfish executable paths found by this scan."
+                : string.Join(Environment.NewLine + Environment.NewLine,
+                    _dependencies.Select(item => $"{item.Kind}: {item.Name}{Environment.NewLine}{item.Path}"));
+            StatusText.Text = $"Found {_dependencies.Count} Steam/VPN executable candidate(s). This scan does not change firewall rules.";
+        }
+        catch (Exception ex)
+        {
+            ShowError("Dependency scan failed", ex);
+        }
+    }
+
+    private void RestoreBackup_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministrator())
+            return;
+
+        var dialog = new OpenFileDialog
+        {
+            Title = "Select a Windows Firewall .wfw backup to restore",
+            Filter = "Windows Firewall backups (*.wfw)|*.wfw",
+            InitialDirectory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GameNetFirewall", "Backups"),
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        var confirm = MessageBox.Show(this,
+            "Restoring a .wfw file imports a FULL Windows Firewall policy and may replace current firewall settings and rules.\n\nOnly continue if this is the backup you intend to restore. This is not a per-game undo.\n\nRestore selected backup?",
+            "Restore full firewall policy", MessageBoxButton.YesNo, MessageBoxImage.Warning);
+        if (confirm != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            var safetyBackup = _firewall.CreateBackup();
+            _firewall.RestoreBackup(dialog.FileName);
+            StatusText.Text = $"Firewall policy restored. Pre-restore backup: {safetyBackup}";
+            MessageBox.Show(this, $"Policy import completed. A backup of the policy before restore was saved at:\n{safetyBackup}",
+                "Firewall policy restored", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Firewall restore failed", ex);
+        }
     }
 
     private void ShowProfiles_Click(object sender, RoutedEventArgs e)
