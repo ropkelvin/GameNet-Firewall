@@ -10,6 +10,7 @@ A Windows 11 desktop utility for inspecting Steam games and preparing named Wind
 - Search games and view their install paths.
 - Scan a selected game folder for executable candidates (up to four directory levels).
 - Discover Steam client paths and likely running/installed Mudfish executable paths.
+- Add/remove outbound allow rules for discovered Steam/VPN executables as preparation for a future allowlist.
 - Preview the selected game's proposed rules.
 - Export a .wfw backup of the current Windows Firewall policy.
 - Inspect current firewall profile settings.
@@ -35,8 +36,8 @@ A Windows 11 desktop utility for inspecting Steam games and preparing named Wind
 2. Confirm the actual game executable.
 3. Click **Preview Actions** before making changes.
 4. Run as administrator and back up the current firewall policy.
-5. Use **Scan Steam / Mudfish Processes** to inspect detected dependency paths. This does not create rules.
-6. Add app-specific allow rules only if you understand they do not block other apps.
+5. Use **Scan Steam / Mudfish Processes** to inspect detected dependency paths.
+6. If useful, add outbound rules for discovered Steam/VPN executables. These rules do not block other apps and may not cover VPN tunnel drivers or services.
 7. Keep a separate recovery path available before changing Windows networking settings.
 
 ## Build
@@ -59,6 +60,7 @@ The GitHub Actions workflow uploads the self-contained Windows x64 artifact name
 - [x] Steam/Mudfish executable discovery (best-effort)
 - [x] Firewall policy backup and profile inspection
 - [x] Preview and named app-specific allow rules
+- [x] Add/remove outbound rules for discovered Steam/VPN executables
 - [x] Remove app-owned rules and guarded full-policy restore
 - [ ] Identify Steam services, launchers, anti-cheat and Mudfish tunnel dependencies comprehensively
 - [ ] Strict outbound allowlisting with explicit safeguards, tested recovery mode and clear dependency handling
