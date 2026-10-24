@@ -107,8 +107,8 @@ public partial class MainWindow : Window
         if (!TryGetSelection(out var game, out var executable))
             return;
 
-        var vpn = MudfishCheckBox.IsChecked == true
-            ? "Mudfish/VPN is selected, but its processes and tunnel traffic are not configured."
+        var vpn = VPN/network toolCheckBox.IsChecked == true
+            ? "VPN/network tool/VPN is selected, but its processes and tunnel traffic are not configured."
             : "No VPN profile selected.";
         var message = $"Game: {game.Name}\nExecutable: {executable.Path}\n\n"
             + "If confirmed, this build can create two app-specific ALLOW rules (inbound and outbound) for this executable.\n"
@@ -140,7 +140,7 @@ public partial class MainWindow : Window
             return;
 
         var warning = "This will back up your current firewall policy and add two app-specific ALLOW rules for the selected executable.\n\n"
-            + "It will NOT block other apps, and it will NOT automatically allow Steam or Mudfish.\n\n"
+            + "It will NOT block other apps, and it will NOT automatically allow Steam or VPN/network tool.\n\n"
             + "Continue?";
         if (MessageBox.Show(this, warning, "Confirm firewall changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
@@ -205,15 +205,42 @@ public partial class MainWindow : Window
         {
             _dependencies = _dependencyScanner.Scan();
             DependenciesText.Text = _dependencies.Count == 0
-                ? "No Steam or Mudfish executable paths found by this scan."
+                ? "No Steam or VPN/network tool executable paths found by this scan."
                 : string.Join(Environment.NewLine + Environment.NewLine,
                     _dependencies.Select(item => $"{item.Kind}: {item.Name}{Environment.NewLine}{item.Path}"));
-            StatusText.Text = $"Found {_dependencies.Count} Steam/VPN executable candidate(s). This scan does not change firewall rules.";
+            StatusText.Text = $"Found {_dependencies.Count} Steam / network-tool executable candidate(s). This scan does not change firewall rules.";
         }
         catch (Exception ex)
         {
             ShowError("Dependency scan failed", ex);
         }
+    }
+
+    private void AddNetworkTool_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Choose a VPN, proxy, tunnel client, or network tool executable",
+            Filter = "Windows executable (*.exe)|*.exe|All files (*.*)|*.*",
+            CheckFileExists = true
+        };
+        if (dialog.ShowDialog(this) != true)
+            return;
+
+        var path = Path.GetFullPath(dialog.FileName);
+        var existing = _dependencies.FirstOrDefault(item => string.Equals(item.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (existing is not null)
+        {
+            StatusText.Text = "That executable is already in the dependency list.";
+            return;
+        }
+
+        _dependencies = _dependencies
+            .Append(new NetworkDependency(Path.GetFileNameWithoutExtension(path), path, "User-selected network tool"))
+            .OrderBy(item => item.Kind).ThenBy(item => item.Name).ToArray();
+        DependenciesText.Text = string.Join(Environment.NewLine + Environment.NewLine,
+            _dependencies.Select(item => $"{item.Kind}: {item.Name}{Environment.NewLine}{item.Path}"));
+        StatusText.Text = "Added a user-selected network tool. No firewall rules have been changed.";
     }
 
     private void AddDependencyRules_Click(object sender, RoutedEventArgs e)
@@ -223,14 +250,14 @@ public partial class MainWindow : Window
 
         if (_dependencies.Count == 0)
         {
-            MessageBox.Show(this, "Scan Steam / Mudfish Processes first. No discovered dependency paths are available.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "Scan Steam / Network Tools first. No discovered dependency paths are available.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         var existing = _dependencies.Where(item => File.Exists(item.Path)).ToArray();
         if (existing.Length == 0)
         {
-            MessageBox.Show(this, "No valid executable paths were found. Scan again while Steam or Mudfish is installed/running.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "No valid executable paths were found. Scan again while Steam or VPN/network tool is installed/running.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
@@ -270,7 +297,7 @@ public partial class MainWindow : Window
 
         if (_dependencies.Count == 0)
         {
-            MessageBox.Show(this, "Scan Steam / Mudfish Processes first so the app knows which dependency rules to remove.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "Scan Steam / Network Tools first so the app knows which dependency rules to remove.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
