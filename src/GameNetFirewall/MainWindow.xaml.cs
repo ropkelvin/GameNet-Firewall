@@ -107,8 +107,8 @@ public partial class MainWindow : Window
         if (!TryGetSelection(out var game, out var executable))
             return;
 
-        var vpn = VPN/network toolCheckBox.IsChecked == true
-            ? "VPN/network tool/VPN is selected, but its processes and tunnel traffic are not configured."
+        var vpn = NetworkToolCheckBox.IsChecked == true
+            ? "A VPN/network tool is selected, but its processes and tunnel traffic are not fully configured."
             : "No VPN profile selected.";
         var message = $"Game: {game.Name}\nExecutable: {executable.Path}\n\n"
             + "If confirmed, this build can create two app-specific ALLOW rules (inbound and outbound) for this executable.\n"
@@ -140,7 +140,7 @@ public partial class MainWindow : Window
             return;
 
         var warning = "This will back up your current firewall policy and add two app-specific ALLOW rules for the selected executable.\n\n"
-            + "It will NOT block other apps, and it will NOT automatically allow Steam or VPN/network tool.\n\n"
+            + "It will NOT block other apps, and it will NOT automatically allow Steam or your selected VPN/network tools.\n\n"
             + "Continue?";
         if (MessageBox.Show(this, warning, "Confirm firewall changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
             return;
@@ -205,7 +205,7 @@ public partial class MainWindow : Window
         {
             _dependencies = _dependencyScanner.Scan();
             DependenciesText.Text = _dependencies.Count == 0
-                ? "No Steam or VPN/network tool executable paths found by this scan."
+                ? "No Steam or common VPN/network tool executable paths found by this scan."
                 : string.Join(Environment.NewLine + Environment.NewLine,
                     _dependencies.Select(item => $"{item.Kind}: {item.Name}{Environment.NewLine}{item.Path}"));
             StatusText.Text = $"Found {_dependencies.Count} Steam / network-tool executable candidate(s). This scan does not change firewall rules.";
@@ -257,7 +257,7 @@ public partial class MainWindow : Window
         var existing = _dependencies.Where(item => File.Exists(item.Path)).ToArray();
         if (existing.Length == 0)
         {
-            MessageBox.Show(this, "No valid executable paths were found. Scan again while Steam or VPN/network tool is installed/running.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            MessageBox.Show(this, "No valid executable paths were found. Scan again while Steam or a VPN/network tool is installed/running.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
