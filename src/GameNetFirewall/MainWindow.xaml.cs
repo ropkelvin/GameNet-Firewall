@@ -9,7 +9,11 @@ namespace GameNetFirewall;
 public partial class MainWindow : Window
 {
     private readonly SteamLibraryScanner _scanner = new();
+    private readonly ExecutableScanner _executableScanner = new();
+    private readonly FirewallService _firewall = new();
     private IReadOnlyList<SteamGame> _allGames = Array.Empty<SteamGame>();
+    private IReadOnlyList<GameExecutable> _executables = Array.Empty<GameExecutable>();
+    private string? _lastBackupPath;
 
     public MainWindow()
     {
@@ -58,13 +62,187 @@ public partial class MainWindow : Window
         {
             SelectedGameName.Text = "Choose a game";
             SelectedGamePath.Text = "The install path will appear here.";
+            ExecutableList.ItemsSource = null;
+            _executables = Array.Empty<GameExecutable>();
             return;
         }
 
         SelectedGameName.Text = game.Name;
         SelectedGamePath.Text = $"Install folder:\n{game.InstallDirectory}\n\nApp ID: {game.AppId}\n\n"
             + (Directory.Exists(game.InstallDirectory)
-                ? "Install folder exists. Executable detection is a future milestone."
+                ? "Install folder exists. Scan to identify executable candidates."
                 : "Install folder was not found. The game may have moved or the manifest may be stale.");
+
+        _executables = Array.Empty<GameExecutable>();
+        ExecutableList.ItemsSource = null;
     }
+
+    private void ScanExecutables_Click(object sender, RoutedEventArgs e)
+    {
+        if (GamesList.SelectedItem is not SteamGame game)
+        {
+            MessageBox.Show(this, "Select a Steam game first.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        try
+        {
+            _executables = _executableScanner.Scan(game);
+            ExecutableList.ItemsSource = _executables;
+            if (_executables.Count > 0)
+                ExecutableList.SelectedIndex = 0;
+            StatusText.Text = $"Found {_executables.Count} executable candidate(s). Verify the chosen file is the actual game, not a launcher or helper.";
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, ex.Message, "Executable scan", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void Preview_Click(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelection(out var game, out var executable))
+            return;
+
+        var vpn = MudfishCheckBox.IsChecked == true
+            ? "Mudfish/VPN is selected, but its processes and tunnel traffic are not configured."
+            : "No VPN profile selected.";
+        var message = $"Game: {game.Name}\nExecutable: {executable.Path}\n\n"
+            + "If confirmed, this build can create two app-specific ALLOW rules (inbound and outbound) for this executable.\n"
+            + "It will not block other applications or change the global default policy.\n"
+            + "Steam itself is not yet automatically allowlisted.\n"
+            + vpn + "\n\nNo changes will be made by preview.";
+        MessageBox.Show(this, message, "Firewall action preview", MessageBoxButton.OK, MessageBoxImage.Information);
+    }
+
+    private void Backup_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministrator())
+            return;
+        try
+        {
+            _lastBackupPath = _firewall.CreateBackup();
+            StatusText.Text = $"Firewall policy backup saved: {_lastBackupPath}";
+            MessageBox.Show(this, $"Backup created successfully:\n{_lastBackupPath}", "Firewall backup", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Firewall backup failed", ex);
+        }
+    }
+
+    private void ApplyRules_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministrator() || !TryGetSelection(out var game, out var executable))
+            return;
+
+        var warning = "This will back up your current firewall policy and add two app-specific ALLOW rules for the selected executable.\n\n"
+            + "It will NOT block other apps, and it will NOT automatically allow Steam or Mudfish.\n\n"
+            + "Continue?";
+        if (MessageBox.Show(this, warning, "Confirm firewall changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        try
+        {
+            _lastBackupPath = _firewall.CreateBackup();
+            var stem = $"{FirewallService.RulePrefix}{game.AppId} - {Sanitize(System.IO.Path.GetFileNameWithoutExtension(executable.Path))}";
+            _firewall.AddProgramAllowRule(stem + " - Outbound", executable.Path, "out");
+            try
+            {
+                _firewall.AddProgramAllowRule(stem + " - Inbound", executable.Path, "in");
+            }
+            catch
+            {
+                _firewall.RemoveRule(stem + " - Outbound");
+                throw;
+            }
+
+            StatusText.Text = $"Added game allow rules. Backup: {_lastBackupPath}";
+            MessageBox.Show(this, $"Created inbound and outbound allow rules for:\n{executable.Path}\n\nBackup:\n{_lastBackupPath}\n\nReminder: these rules do not block other applications.", "Rules created", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Could not apply firewall rules", ex);
+        }
+    }
+
+    private void RemoveRules_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministrator() || GamesList.SelectedItem is not SteamGame game)
+        {
+            if (GamesList.SelectedItem is not SteamGame)
+                MessageBox.Show(this, "Select the game whose GameNet rules you want to remove.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        if (MessageBox.Show(this, $"Remove GameNet Firewall rules for {game.Name}?\nOther firewall rules will not be touched.", "Confirm removal", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
+            return;
+
+        var errors = new List<string>();
+        foreach (var executable in _executableScanner.Scan(game))
+        {
+            var stem = $"{FirewallService.RulePrefix}{game.AppId} - {Sanitize(System.IO.Path.GetFileNameWithoutExtension(executable.Path))}";
+            foreach (var suffix in new[] { " - Outbound", " - Inbound" })
+            {
+                try { _firewall.RemoveRule(stem + suffix); }
+                catch (Exception ex) { errors.Add(ex.Message); }
+            }
+        }
+
+        StatusText.Text = errors.Count == 0
+            ? "Removal attempted for detected executable names. Existing files may have changed since rules were created."
+            : $"Some rules could not be removed: {string.Join(" | ", errors)}";
+        if (errors.Count > 0)
+            MessageBox.Show(this, StatusText.Text, "Rule removal", MessageBoxButton.OK, MessageBoxImage.Warning);
+    }
+
+    private void ShowProfiles_Click(object sender, RoutedEventArgs e)
+    {
+        if (!RequireAdministrator())
+            return;
+        try
+        {
+            MessageBox.Show(this, _firewall.GetCurrentProfiles(), "Current Windows Firewall profiles", MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+        catch (Exception ex)
+        {
+            ShowError("Could not read firewall profiles", ex);
+        }
+    }
+
+    private bool TryGetSelection(out SteamGame game, out GameExecutable executable)
+    {
+        game = null!;
+        executable = null!;
+        if (GamesList.SelectedItem is not SteamGame selectedGame)
+        {
+            MessageBox.Show(this, "Select a Steam game first.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            return false;
+        }
+        if (ExecutableList.SelectedItem is not GameExecutable selectedExecutable)
+        {
+            MessageBox.Show(this, "Scan the selected game folder and choose an executable first.", "GameNet Firewall", MessageBoxButton.OK, MessageBoxImage.Information);
+            return false;
+        }
+        game = selectedGame;
+        executable = selectedExecutable;
+        return true;
+    }
+
+    private bool RequireAdministrator()
+    {
+        if (_firewall.IsAdministrator())
+            return true;
+        MessageBox.Show(this, "This action requires administrator rights. Close the app, then right-click GameNetFirewall.exe and choose 'Run as administrator'.", "Administrator rights required", MessageBoxButton.OK, MessageBoxImage.Warning);
+        return false;
+    }
+
+    private static string Sanitize(string value)
+    {
+        var chars = value.Select(c => char.IsLetterOrDigit(c) || c is '-' or '_' ? c : '_').ToArray();
+        return new string(chars);
+    }
+
+    private void ShowError(string title, Exception ex) =>
+        MessageBox.Show(this, ex.Message, title, MessageBoxButton.OK, MessageBoxImage.Error);
 }
